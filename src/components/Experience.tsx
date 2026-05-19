@@ -4,6 +4,8 @@ import { useRef } from 'react';
 import * as THREE from 'three';
 import { GenerativeBackground } from './GenerativeBackground';
 
+import { Atom } from './Atom';
+
 const Scene = () => {
   const scroll = useScroll();
   const groupRef = useRef<THREE.Group>(null);
@@ -11,26 +13,20 @@ const Scene = () => {
   useFrame((state) => {
     const offset = scroll.offset;
     // Camera movement based on scroll
-    state.camera.position.z = 5 - offset * 3;
+    state.camera.position.z = 8 - offset * 4; // Moved back a bit for the atom
     state.camera.position.y = offset * 2;
     state.camera.lookAt(0, 0, 0);
     
     if (groupRef.current) {
-        groupRef.current.rotation.y = offset * Math.PI * 2;
+        groupRef.current.rotation.y = offset * Math.PI;
     }
   });
 
   return (
     <group ref={groupRef}>
-      <Float speed={2} rotationIntensity={0.5} floatIntensity={0.5}>
-        <mesh position={[0, 0, 0]}>
-          <icosahedronGeometry args={[1, 15]} />
-          <meshStandardMaterial color="#333" wireframe />
-        </mesh>
-      </Float>
+      <Atom />
       <GenerativeBackground />
       <ambientLight intensity={0.5} />
-      <pointLight position={[10, 10, 10]} intensity={1} />
     </group>
   );
 };
