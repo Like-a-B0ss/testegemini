@@ -21,7 +21,7 @@ export const Overlay = () => {
         alignItems: 'center',
         pointerEvents: 'auto'
       }}>
-        <div style={{ fontWeight: 900, fontSize: '1.5rem', letterSpacing: '2px' }}>LUSION</div>
+        <div style={{ fontWeight: 900, fontSize: '1.5rem', letterSpacing: '2px' }}>LEONARDO</div>
         <button style={{
           background: 'none',
           border: 'none',

@@ -42,7 +42,7 @@ export const Experience = () => {
       <Scroll html>
         <div style={{ width: '100vw' }}>
           <section style={{ height: '100vh', display: 'flex', alignItems: 'center', padding: '0 10%' }}>
-            <h1 style={{ fontSize: '5rem', fontWeight: '900', margin: 0 }}>LUSION</h1>
+            <h1 style={{ fontSize: '5rem', fontWeight: '900', margin: 0 }}>LEONARDO</h1>
           </section>
           <section style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', padding: '0 10%' }}>
             <h2 style={{ fontSize: '3rem', fontWeight: '700', margin: 0 }}>CREATIVE STUDIO</h2>
