@@ -3,6 +3,7 @@ import { Experience } from './components/Experience';
 import { Overlay } from './components/Overlay';
 import { Bloom, EffectComposer, ChromaticAberration, Vignette } from '@react-three/postprocessing';
 import { BlendFunction } from 'postprocessing';
+import * as THREE from 'three';
 
 function App() {
   return (
