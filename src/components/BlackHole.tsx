@@ -11,7 +11,6 @@ uniform vec2 iMouse;
 #define STEP_SIZE 0.08
 #define RS 2.0
 
-// Better Noise for Disk
 float hash(float n) { return fract(sin(n) * 43758.5453123); }
 float noise(vec3 x) {
     vec3 p = floor(x);
@@ -39,22 +38,26 @@ mat2 rot(float a) {
 }
 
 void main() {
-    vec2 uv = (gl_FragCoord.xy - 0.5 * iResolution.xy) / iResolution.y;
+    // Correctly centering the UVs based on resolution
+    vec2 uv = (gl_FragCoord.xy - 0.5 * iResolution.xy) / min(iResolution.y, iResolution.x);
     
-    // Camera setup
-    vec3 ro = vec3(0, 2.5, -15);
-    ro.yz *= rot(-iMouse.y * 1.5);
-    ro.xz *= rot(-iMouse.x * 3.0 + iTime * 0.1);
+    // Camera setup with mouse interaction
+    vec3 ro = vec3(0, 0, -15);
+    // Apply rotation based on mouse (iMouse is -1 to 1)
+    float pitch = -iMouse.y * 1.5;
+    float yaw = -iMouse.x * 3.14 + iTime * 0.1;
+    
+    ro.yz *= rot(pitch);
+    ro.xz *= rot(yaw);
     
     vec3 target = vec3(0, 0, 0);
     vec3 ww = normalize(target - ro);
     vec3 uu = normalize(cross(ww, vec3(0, 1, 0)));
     vec3 vv = normalize(cross(uu, ww));
-    vec3 rd = normalize(uv.x * uu + uv.y * vv + 1.5 * ww);
+    vec3 rd = normalize(uv.x * uu + uv.y * vv + 2.0 * ww);
     
     vec3 col = vec3(0);
     vec3 p = ro;
-    
     float h = STEP_SIZE;
     
     for(int i=0; i<ITERATIONS; i++) {
@@ -67,47 +70,41 @@ void main() {
         
         p += rd * h;
         
-        // Accretion Disk - Volumetric-like density
+        // Accretion Disk
         float r = length(p.xz);
-        if (r > RS * 1.5 && r < RS * 7.0 && abs(p.y) < 0.5) {
-            float thickness = 0.4 * (1.0 - smoothstep(RS * 1.5, RS * 7.0, r));
-            if (abs(p.y) < thickness) {
-                // Procedural texture for the disk
+        if (r > RS * 1.2 && r < RS * 8.0) {
+            float diskHeight = 0.05 * (r - RS * 1.2);
+            if (abs(p.y) < diskHeight) {
                 float angle = atan(p.z, p.x);
-                float dNoise = fbm(vec3(r * 0.5 - iTime * 0.5, angle * 3.0, p.y * 5.0));
+                float dNoise = fbm(vec3(r * 0.4 - iTime * 0.6, angle * 2.0, p.y * 10.0));
                 
-                // Realistic falloff and glow
-                float dens = (1.0 - abs(p.y)/thickness) * smoothstep(RS*7.0, RS*3.0, r);
+                float dens = (1.0 - abs(p.y)/diskHeight) * smoothstep(RS*8.0, RS*3.0, r);
                 dens *= dNoise;
                 
-                // Color based on temperature/distance
-                vec3 diskCol = mix(vec3(1.0, 0.8, 0.5), vec3(1.0, 0.3, 0.05), smoothstep(RS*1.5, RS*7.0, r));
+                vec3 diskCol = mix(vec3(1.0, 0.9, 0.7), vec3(1.0, 0.4, 0.1), smoothstep(RS*1.2, RS*8.0, r));
                 
-                // Doppler shifting approximation (blueshift one side, redshift the other)
-                float doppler = 1.0 + dot(normalize(cross(vec3(0,1,0), p)), rd) * 0.5;
+                // Doppler shifting
+                float doppler = 1.0 + dot(normalize(cross(vec3(0,1,0), p)), rd) * 0.6;
                 diskCol *= doppler;
                 
-                col += diskCol * dens * 0.25;
+                col += diskCol * dens * 0.4;
             }
         }
         
-        // Event Horizon
         if (d < RS) {
-            col *= 0.0;
+            col = vec3(0);
             break;
         }
         
-        // Starfield background with lensing
-        if (d > 40.0) {
-            float s = noise(rd * 100.0);
-            if (s > 0.98) col += vec3(pow(smoothstep(0.98, 1.0, s), 10.0));
+        if (d > 50.0) {
+            float s = noise(rd * 150.0);
+            if (s > 0.99) col += vec3(pow(smoothstep(0.99, 1.0, s), 20.0));
             break;
         }
     }
     
-    // Final Polish
-    col = 1.0 - exp(-col * 1.5); // Exposure
-    col = pow(col, vec3(0.4545)); // Gamma
+    col = 1.0 - exp(-col * 2.0);
+    col = pow(col, vec3(0.4545));
     
     gl_FragColor = vec4(col, 1.0);
 }
@@ -121,24 +118,22 @@ void main() {
 
 export const BlackHole = () => {
   const meshRef = useRef<THREE.Mesh>(null);
-  const { size } = useThree();
+  const { size, viewport } = useThree();
   
   const uniforms = useMemo(() => ({
     iTime: { value: 0 },
-    iResolution: { value: new THREE.Vector2(size.width, size.height) },
+    iResolution: { value: new THREE.Vector2(size.width * viewport.dpr, size.height * viewport.dpr) },
     iMouse: { value: new THREE.Vector2(0, 0) }
-  }), [size]);
+  }), []);
 
   useFrame((state) => {
     if (meshRef.current) {
-      (meshRef.current.material as THREE.ShaderMaterial).uniforms.iTime.value = state.clock.getElapsedTime();
-      (meshRef.current.material as THREE.ShaderMaterial).uniforms.iMouse.value.set(
-        state.mouse.x,
-        state.mouse.y
-      );
-      (meshRef.current.material as THREE.ShaderMaterial).uniforms.iResolution.value.set(
-        state.size.width,
-        state.size.height
+      const material = meshRef.current.material as THREE.ShaderMaterial;
+      material.uniforms.iTime.value = state.clock.getElapsedTime();
+      material.uniforms.iMouse.value.set(state.mouse.x, state.mouse.y);
+      material.uniforms.iResolution.value.set(
+        state.size.width * state.viewport.dpr,
+        state.size.height * state.viewport.dpr
       );
     }
   });
@@ -154,4 +149,5 @@ export const BlackHole = () => {
     </mesh>
   );
 };
+
 
