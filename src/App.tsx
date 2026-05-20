@@ -1,11 +1,7 @@
 import { Canvas } from '@react-three/fiber';
 import { PhysicsUniverse } from './components/PhysicsUniverse';
-import { OrbitControls, Stars, EffectComposer, Bloom } from '@react-three/drei';
-
-// Note: Re-importing from postprocessing for the EffectComposer if needed, 
-// but drei's version is simpler for this quick pivot. 
-// Using postprocessing for better control.
-import { EffectComposer as PostEffectComposer, Bloom as PostBloom } from '@react-three/postprocessing';
+import { OrbitControls, Stars } from '@react-three/drei';
+import { EffectComposer, Bloom } from '@react-three/postprocessing';
 
 function App() {
   return (
@@ -20,9 +16,9 @@ function App() {
         <Stars radius={100} depth={50} count={5000} factor={4} saturation={0} fade speed={1} />
         <OrbitControls makeDefault />
         
-        <PostEffectComposer>
-          <PostBloom luminanceThreshold={0.5} intensity={1.5} radius={0.4} />
-        </PostEffectComposer>
+        <EffectComposer>
+          <Bloom luminanceThreshold={0.5} intensity={1.5} radius={0.4} />
+        </EffectComposer>
       </Canvas>
       
       {/* UI Overlay */}
