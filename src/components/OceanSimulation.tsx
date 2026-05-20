@@ -1,29 +1,21 @@
 import { useRef, useMemo } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
-import { Float, PerspectiveCamera, Environment, Sky } from '@react-three/drei';
+import { Sphere, Stars, Sky, Environment, useHelper } from '@react-three/drei';
 import * as THREE from 'three';
 
-// Water Shader (Gerstner Waves for realism)
+// Enhanced Gerstner Wave Shader with Wind and Foam
 const waterVertexShader = `
   uniform float iTime;
   varying vec2 vUv;
   varying vec3 vPos;
   varying vec3 vNormal;
-
-  struct Wave {
-    vec2 dir;
-    float steepness;
-    float wavelength;
-  };
-
-  #define WAVE_COUNT 4
-  uniform Wave waves[WAVE_COUNT];
+  varying float vWaveHeight;
 
   vec3 gerstnerWave(vec2 dir, float steepness, float wavelength, vec3 p, inout vec3 tangent, inout vec3 binormal) {
     float k = 2.0 * 3.14159 / wavelength;
     float c = sqrt(9.8 / k);
     vec2 d = normalize(dir);
-    float f = k * (dot(d, p.xz) - c * iTime);
+    float f = k * (dot(d, p.xz) - c * iTime * 1.5); // Wind speed multiplier
     float a = steepness / k;
 
     tangent += vec3(
@@ -51,11 +43,11 @@ const waterVertexShader = `
     vec3 binormal = vec3(0.0, 0.0, 1.0);
     
     vec3 offset = vec3(0.0);
-    offset += gerstnerWave(vec2(1.0, 0.5), 0.15, 20.0, p, tangent, binormal);
-    offset += gerstnerWave(vec2(0.5, 1.0), 0.1, 10.0, p, tangent, binormal);
-    offset += gerstnerWave(vec2(-0.5, 0.8), 0.05, 5.0, p, tangent, binormal);
-    offset += gerstnerWave(vec2(0.8, -0.2), 0.08, 15.0, p, tangent, binormal);
+    offset += gerstnerWave(vec2(1.0, 0.6), 0.2, 25.0, p, tangent, binormal);
+    offset += gerstnerWave(vec2(0.4, 0.9), 0.15, 12.0, p, tangent, binormal);
+    offset += gerstnerWave(vec2(-0.8, 0.3), 0.1, 8.0, p, tangent, binormal);
     
+    vWaveHeight = offset.y;
     vPos = p + offset;
     vNormal = normalize(cross(binormal, tangent));
     
@@ -64,102 +56,136 @@ const waterVertexShader = `
 `;
 
 const waterFragmentShader = `
-  varying vec2 vUv;
   varying vec3 vPos;
   varying vec3 vNormal;
-  uniform vec3 iColor;
-  uniform vec3 cameraPosition;
+  varying float vWaveHeight;
+  uniform vec3 sunPosition;
+  uniform float iTime;
 
   void main() {
     vec3 viewDir = normalize(cameraPosition - vPos);
-    float fresnel = pow(1.0 - dot(vNormal, viewDir), 5.0);
     
-    vec3 deepWater = vec3(0.01, 0.05, 0.1);
-    vec3 shallowWater = vec3(0.1, 0.4, 0.5);
-    vec3 color = mix(deepWater, shallowWater, vNormal.y);
+    // Water Colors based on wave height
+    vec3 deepWater = vec3(0.0, 0.05, 0.1);
+    vec3 shallowWater = vec3(0.0, 0.4, 0.5);
+    vec3 foamColor = vec3(0.8, 0.9, 1.0);
     
-    // Add specular highlight
-    vec3 lightDir = normalize(vec3(5.0, 10.0, 2.0));
-    float spec = pow(max(dot(reflect(-lightDir, vNormal), viewDir), 0.0), 128.0);
+    vec3 color = mix(deepWater, shallowWater, smoothstep(-1.0, 1.0, vWaveHeight));
     
-    color += spec * 0.5;
-    color = mix(color, vec3(0.8, 0.9, 1.0), fresnel * 0.5);
+    // Add Foam at crests
+    float foam = smoothstep(0.5, 1.2, vWaveHeight);
+    color = mix(color, foamColor, foam * 0.4);
     
-    gl_FragColor = vec4(color, 0.9);
+    // Fresnel
+    float fresnel = pow(1.0 - max(dot(vNormal, viewDir), 0.0), 5.0);
+    
+    // Specular Sun Reflection
+    vec3 lightDir = normalize(sunPosition);
+    vec3 halfDir = normalize(lightDir + viewDir);
+    float spec = pow(max(dot(vNormal, halfDir), 0.0), 256.0);
+    
+    color += spec * vec3(1.0, 0.9, 0.7) * 2.0;
+    color = mix(color, vec3(0.5, 0.7, 1.0), fresnel * 0.3);
+    
+    gl_FragColor = vec4(color, 0.95);
   }
 `;
 
-const Boat = () => {
-  const meshRef = useRef<THREE.Group>(null);
+const Boat = ({ sunPos }: { sunPos: [number, number, number] }) => {
+  const groupRef = useRef<THREE.Group>(null);
 
   useFrame((state) => {
-    if (!meshRef.current) return;
+    if (!groupRef.current) return;
     const t = state.clock.getElapsedTime();
     
-    // Simple Buoyancy Simulation
-    // In a real SPH this would be complex, here we mimic the Gerstner wave displacement
-    const x = meshRef.current.position.x;
-    const z = meshRef.current.position.z;
-    const y = Math.sin(t * 0.5 + x * 0.1) * 0.5 + Math.cos(t * 0.3 + z * 0.1) * 0.3;
+    // Physics responding to waves
+    const x = groupRef.current.position.x;
+    const z = groupRef.current.position.z;
     
-    meshRef.current.position.y = y;
-    meshRef.current.rotation.x = Math.sin(t * 0.4) * 0.1;
-    meshRef.current.rotation.z = Math.cos(t * 0.5) * 0.1;
+    // Mocking wave height at boat position
+    const waveY = Math.sin(t * 1.5 + x * 0.1) * 0.4 + Math.cos(t * 1.2 + z * 0.1) * 0.3;
+    
+    groupRef.current.position.y = waveY - 0.2;
+    groupRef.current.rotation.x = Math.sin(t * 1.1) * 0.05;
+    groupRef.current.rotation.z = Math.cos(t * 0.8) * 0.08;
+    groupRef.current.position.x = Math.sin(t * 0.2) * 2.0; // Slow drift
   });
 
   return (
-    <group ref={meshRef}>
-      {/* Detailed Procedural Boat */}
-      <mesh position={[0, 0.2, 0]}>
-        <boxGeometry args={[1, 0.5, 2.5]} />
-        <meshStandardMaterial color="#4a3b2a" />
+    <group ref={groupRef}>
+      {/* Hull */}
+      <mesh position={[0, 0.3, 0]} castShadow>
+        <boxGeometry args={[1.2, 0.6, 3]} />
+        <meshStandardMaterial color="#3d2b1f" roughness={0.3} />
       </mesh>
-      <mesh position={[0, 0.6, -0.5]}>
-        <boxGeometry args={[0.8, 0.8, 1]} />
-        <meshStandardMaterial color="#ddd" />
+      {/* Cabin */}
+      <mesh position={[0, 0.8, -0.4]} castShadow>
+        <boxGeometry args={[1, 0.8, 1.2]} />
+        <meshStandardMaterial color="#f0f0f0" />
       </mesh>
-      <mesh position={[0, 1.2, -0.2]}>
-        <cylinderGeometry args={[0.05, 0.05, 2]} />
+      {/* Mast */}
+      <mesh position={[0, 1.8, 0.5]} castShadow>
+        <cylinderGeometry args={[0.05, 0.05, 3]} />
         <meshStandardMaterial color="#222" />
       </mesh>
+      <pointLight position={[0, 1, 0]} intensity={0.5} color="#ffaa00" />
     </group>
   );
 };
 
 export const OceanSimulation = () => {
   const waterRef = useRef<THREE.ShaderMaterial>(null);
+  
+  // Day/Night State
+  const sunRef = useRef(new THREE.Vector3());
 
   useFrame((state) => {
+    const t = state.clock.getElapsedTime() * 0.1; // Speed of day cycle
+    const sunY = Math.sin(t);
+    const sunZ = Math.cos(t);
+    sunRef.current.set(50, sunY * 100, sunZ * 100);
+
     if (waterRef.current) {
       waterRef.current.uniforms.iTime.value = state.clock.getElapsedTime();
+      waterRef.current.uniforms.sunPosition.value.copy(sunRef.current);
     }
   });
 
   const uniforms = useMemo(() => ({
     iTime: { value: 0 },
-    iColor: { value: new THREE.Color('#001e3f') },
+    sunPosition: { value: new THREE.Vector3() },
   }), []);
 
   return (
     <>
-      <Sky sunPosition={[100, 20, 100]} />
-      <Environment preset="city" />
-      <ambientLight intensity={0.5} />
-      <pointLight position={[10, 10, 10]} intensity={1} />
+      <Sky sunPosition={[sunRef.current.x, sunRef.current.y, sunRef.current.z]} />
+      <Stars radius={100} depth={50} count={5000} factor={4} saturation={0} fade speed={1} />
       
-      <Boat />
+      <directionalLight 
+        position={[sunRef.current.x, sunRef.current.y, sunRef.current.z]} 
+        intensity={Math.max(0, sunRef.current.y / 100) * 2} 
+        castShadow 
+      />
       
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.5, 0]}>
-        <planeGeometry args={[1000, 1000, 256, 256]} />
+      <Environment preset="night" />
+      
+      <Boat sunPos={[sunRef.current.x, sunRef.current.y, sunRef.current.z]} />
+      
+      <mesh rotation={[-Math.PI / 2, 0, 0]}>
+        <planeGeometry args={[2000, 2000, 512, 512]} />
         <shaderMaterial
           ref={waterRef}
           vertexShader={waterVertexShader}
           fragmentShader={waterFragmentShader}
           uniforms={uniforms}
-          transparent={true}
-          side={THREE.DoubleSide}
+          transparent
         />
       </mesh>
+      
+      {/* Moon (visible at night) */}
+      <Sphere args={[2, 32, 32]} position={[-50, -50, -100]}>
+          <meshBasicMaterial color="#ffffcc" />
+      </Sphere>
     </>
   );
 };
