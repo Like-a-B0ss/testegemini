@@ -1,24 +1,17 @@
 import { Canvas } from '@react-three/fiber';
-import { PhysicsUniverse } from './components/PhysicsUniverse';
-import { OrbitControls, Stars } from '@react-three/drei';
-import { EffectComposer, Bloom } from '@react-three/postprocessing';
+import { OceanSimulation } from './components/OceanSimulation';
+import { OrbitControls } from '@react-three/drei';
 
 function App() {
   return (
-    <div style={{ width: '100vw', height: '100vh', background: '#050505', overflow: 'hidden' }}>
+    <div style={{ width: '100vw', height: '100vh', background: '#000', overflow: 'hidden' }}>
       <Canvas
-        camera={{ position: [0, 0, 15], fov: 45 }}
+        camera={{ position: [10, 10, 10], fov: 45 }}
         style={{ position: 'fixed', top: 0, left: 0 }}
         dpr={[1, 2]}
       >
-        <color attach="background" args={['#050505']} />
-        <PhysicsUniverse />
-        <Stars radius={100} depth={50} count={5000} factor={4} saturation={0} fade speed={1} />
+        <OceanSimulation />
         <OrbitControls makeDefault />
-        
-        <EffectComposer>
-          <Bloom luminanceThreshold={0.5} intensity={1.5} radius={0.4} />
-        </EffectComposer>
       </Canvas>
       
       {/* UI Overlay */}
@@ -29,15 +22,11 @@ function App() {
         color: 'white',
         zIndex: 10,
         pointerEvents: 'none',
-        fontFamily: 'monospace'
+        fontFamily: 'monospace',
+        textShadow: '2px 2px 4px rgba(0,0,0,0.5)'
       }}>
-        <h1 style={{ margin: 0, fontSize: '1.5rem', letterSpacing: '0.2em' }}>SUBATOMIC SIMULATOR</h1>
-        <p style={{ opacity: 0.5, fontSize: '0.8rem' }}>QUANTUM PHYSICS ENGINE V1.0</p>
-        <div style={{ marginTop: '20px', fontSize: '0.7rem', display: 'flex', gap: '20px' }}>
-          <span><span style={{color: '#ff3333'}}>●</span> PROTONS</span>
-          <span><span style={{color: '#3333ff'}}>●</span> NEUTRONS</span>
-          <span><span style={{color: '#ffff00'}}>●</span> ELECTRONS</span>
-        </div>
+        <h1 style={{ margin: 0, fontSize: '1.5rem', letterSpacing: '0.2em' }}>INFINITE OCEAN</h1>
+        <p style={{ opacity: 0.7, fontSize: '0.8rem' }}>GERSTNER WAVE SIMULATION V1.0</p>
       </div>
       
       <div style={{
@@ -45,7 +34,7 @@ function App() {
         bottom: '40px',
         right: '40px',
         color: 'white',
-        opacity: 0.3,
+        opacity: 0.5,
         fontSize: '0.7rem',
         fontFamily: 'monospace'
       }}>
