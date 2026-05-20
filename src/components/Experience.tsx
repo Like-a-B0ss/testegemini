@@ -23,65 +23,68 @@ const Scene = () => {
   useFrame((state) => {
     const offset = scroll.offset; // 0 to 1
 
-    // EXTREME 3D SCALE: Zooming from Z=5 to Z=250
-    // We use a non-linear curve for more "explosive" transitions at the end
-    const zoomProgress = Math.pow(offset, 1.5);
-    state.camera.position.z = 8 + zoomProgress * 250;
-    state.camera.position.y = Math.sin(offset * Math.PI) * 10;
-    state.camera.position.x = Math.cos(offset * Math.PI * 0.5) * 5;
+    // MASSIVE COSMIC SCALE: Zooming from Z=8 to Z=1000
+    // Using an exponential curve for a "light speed" effect towards the end
+    const zoomProgress = Math.pow(offset, 2); 
+    state.camera.position.z = 8 + zoomProgress * 1000;
+    
+    // Smooth camera wandering
+    state.camera.position.y = Math.sin(offset * Math.PI * 2) * 20;
+    state.camera.position.x = Math.cos(offset * Math.PI * 1.5) * 15;
+    
     state.camera.lookAt(0, 0, 0);
 
-    // Section visibility triggers (spaced out across the vast Z-space)
-    if (subatomicRef.current) subatomicRef.current.visible = offset < 0.2;
-    if (atomicRef.current) atomicRef.current.visible = offset > 0.05 && offset < 0.35;
-    if (molecularRef.current) molecularRef.current.visible = offset > 0.25 && offset < 0.55;
-    if (systemicRef.current) systemicRef.current.visible = offset > 0.45 && offset < 0.75;
-    if (cosmicRef.current) cosmicRef.current.visible = offset > 0.65;
+    // Section visibility triggers (spread across the 1000-unit Z-space)
+    if (subatomicRef.current) subatomicRef.current.visible = offset < 0.15;
+    if (atomicRef.current) atomicRef.current.visible = offset > 0.05 && offset < 0.25;
+    if (molecularRef.current) molecularRef.current.visible = offset > 0.2 && offset < 0.45;
+    if (systemicRef.current) systemicRef.current.visible = offset > 0.4 && offset < 0.7;
+    if (cosmicRef.current) cosmicRef.current.visible = offset > 0.6;
     
     // Slow cinematic rotation of the entire universe
     if (groupRef.current) {
-        groupRef.current.rotation.y = offset * Math.PI * 0.2;
-        groupRef.current.rotation.z = offset * Math.PI * 0.1;
+        groupRef.current.rotation.y = offset * Math.PI * 0.4;
+        groupRef.current.rotation.z = offset * Math.PI * 0.2;
     }
   });
 
   return (
     <group ref={groupRef}>
-      {/* 1. Subatomic (Z: 0-10) */}
+      {/* 1. Subatomic (Z: 0-20) */}
       <group ref={subatomicRef} position={[0, 0, 0]}>
         <SubatomicScale />
       </group>
       
-      {/* 2. Atomic (Z: 20-40) */}
-      <group ref={atomicRef} position={[0, 0, 30]}>
+      {/* 2. Atomic (Z: 50-150) */}
+      <group ref={atomicRef} position={[0, 0, 100]}>
         <Atom />
       </group>
 
-      {/* 3. Molecular (Z: 60-90) */}
-      <group ref={molecularRef} position={[0, 0, 80]}>
+      {/* 3. Molecular (Z: 250-450) */}
+      <group ref={molecularRef} position={[0, 0, 350]}>
         <MolecularScale />
       </group>
 
-      {/* 4. Systemic (Z: 120-160) */}
-      <group ref={systemicRef} position={[0, 0, 150]}>
+      {/* 4. Systemic (Z: 550-750) */}
+      <group ref={systemicRef} position={[0, 0, 650]}>
         <SystemicScale />
       </group>
 
-      {/* 5. Cosmic (Z: 200+) */}
-      <group ref={cosmicRef} position={[0, 0, 250]}>
+      {/* 5. Cosmic (Z: 850+) */}
+      <group ref={cosmicRef} position={[0, 0, 950]}>
         <CosmicScale />
       </group>
 
       <ambientLight intensity={0.2} />
       <pointLight position={[10, 10, 10]} intensity={1} color="#00ffff" />
-      <pointLight position={[-10, -10, 300]} intensity={2} color="#ff00ff" />
+      <pointLight position={[-10, -10, 1000]} intensity={3} color="#ff00ff" />
     </group>
   );
 };
 
 export const Experience = () => {
   return (
-    <ScrollControls pages={10} damping={0.3} distance={1}>
+    <ScrollControls pages={30} damping={0.4} distance={1}>
       <Scene />
       <Scroll html>
         <div style={{ width: '100vw', color: 'white', textTransform: 'uppercase', pointerEvents: 'none' }}>
