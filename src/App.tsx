@@ -1,22 +1,31 @@
 import { Canvas } from '@react-three/fiber';
-import { BlackHole } from './components/BlackHole';
-import { EffectComposer, Bloom } from '@react-three/postprocessing';
+import { PhysicsUniverse } from './components/PhysicsUniverse';
+import { OrbitControls, Stars, EffectComposer, Bloom } from '@react-three/drei';
+
+// Note: Re-importing from postprocessing for the EffectComposer if needed, 
+// but drei's version is simpler for this quick pivot. 
+// Using postprocessing for better control.
+import { EffectComposer as PostEffectComposer, Bloom as PostBloom } from '@react-three/postprocessing';
 
 function App() {
   return (
-    <div style={{ width: '100vw', height: '100vh', background: '#000', overflow: 'hidden' }}>
+    <div style={{ width: '100vw', height: '100vh', background: '#050505', overflow: 'hidden' }}>
       <Canvas
-        camera={{ position: [0, 0, 1] }}
+        camera={{ position: [0, 0, 15], fov: 45 }}
         style={{ position: 'fixed', top: 0, left: 0 }}
         dpr={[1, 2]}
       >
-        <BlackHole />
-        <EffectComposer>
-          <Bloom luminanceThreshold={0.2} mipmapBlur intensity={1.5} radius={0.8} />
-        </EffectComposer>
+        <color attach="background" args={['#050505']} />
+        <PhysicsUniverse />
+        <Stars radius={100} depth={50} count={5000} factor={4} saturation={0} fade speed={1} />
+        <OrbitControls makeDefault />
+        
+        <PostEffectComposer>
+          <PostBloom luminanceThreshold={0.5} intensity={1.5} radius={0.4} />
+        </PostEffectComposer>
       </Canvas>
       
-      {/* Minimal Overlay for context */}
+      {/* UI Overlay */}
       <div style={{
         position: 'absolute',
         top: '40px',
@@ -26,8 +35,25 @@ function App() {
         pointerEvents: 'none',
         fontFamily: 'monospace'
       }}>
-        <h1 style={{ margin: 0, fontSize: '1.5rem', letterSpacing: '0.2em' }}>SINGULARITY ENGINE</h1>
-        <p style={{ opacity: 0.5, fontSize: '0.8rem' }}>GRAVITATIONAL LENSING SIMULATION V1.0</p>
+        <h1 style={{ margin: 0, fontSize: '1.5rem', letterSpacing: '0.2em' }}>SUBATOMIC SIMULATOR</h1>
+        <p style={{ opacity: 0.5, fontSize: '0.8rem' }}>QUANTUM PHYSICS ENGINE V1.0</p>
+        <div style={{ marginTop: '20px', fontSize: '0.7rem', display: 'flex', gap: '20px' }}>
+          <span><span style={{color: '#ff3333'}}>●</span> PROTONS</span>
+          <span><span style={{color: '#3333ff'}}>●</span> NEUTRONS</span>
+          <span><span style={{color: '#ffff00'}}>●</span> ELECTRONS</span>
+        </div>
+      </div>
+      
+      <div style={{
+        position: 'absolute',
+        bottom: '40px',
+        right: '40px',
+        color: 'white',
+        opacity: 0.3,
+        fontSize: '0.7rem',
+        fontFamily: 'monospace'
+      }}>
+        DRAG TO ROTATE • SCROLL TO ZOOM
       </div>
     </div>
   );
